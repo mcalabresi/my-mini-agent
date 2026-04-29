@@ -1,18 +1,17 @@
-import getpass
-from datetime import datetime
 from pprint import pprint
-from typing import Annotated
 
 from rich.console import Console
 from rich.markdown import Markdown
 
 from agent import Agent
-from helper_functions import (
-    list_dir,
-    message_debug,
-    read_markdown_file,
-    write_markdown_file,
+from context_catalog import (
+    current_date_time,
+    my_files,
+    obsidian_writer_skill,
+    user_context,
 )
+from helper_functions import message_debug
+from tool_catalog import list_dir, read_markdown_file, write_markdown_file
 
 
 def main() -> None:
@@ -24,60 +23,31 @@ def main() -> None:
     agent = Agent(model="qwen/qwen3.5-9b")
 
     # let's define a context function
-    # and let's use the decorator that we defined as agent method
 
-    @agent.context
-    def current_date_time() -> str:
-        return (
-            f"Current date and time: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}\n"
-        )
+    # we can use the decorator that we defined as agent method if we want to define it here
+    # @agent.context
+    # def current_date_time() -> str:
+    #     return (
+    #         f"Current date and time: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}\n"
+    #     )
 
-    @agent.context
-    def user_context() -> str:
-        return f"Current user: {getpass.getuser()}\n"
+    # or we import the function and add the context like this
+    agent.context(current_date_time)
+    agent.context(user_context)
+    agent.context(my_files)
+    agent.skill("obsidian-markdown-lite")
+    # agent.context(obsidian_writer_skill)
 
-    @agent.tool
-    def add(
-        a: Annotated[int | float, "First number"],
-        b: Annotated[int | float, "Second number"],
-    ) -> dict[str, int | float]:
-        """Add two numbers together."""
-        return {"result": a + b}
+    # example of defining a tool and registering on the fly
+    # @agent.tool
+    # def add(
+    #     a: Annotated[int | float, "First number"],
+    #     b: Annotated[int | float, "Second number"],
+    # ) -> dict[str, int | float]:
+    #     """Add two numbers together."""
+    #     return {"result": a + b}
 
-    @agent.tool
-    def multiply(
-        a: Annotated[int | float, "First number"],
-        b: Annotated[int | float, "Second number"],
-    ) -> dict[str, int | float]:
-        """Multiplies two numbers together."""
-        return {"result": a * b}
-
-    @agent.tool
-    def secret() -> dict[str, str]:
-        """Returns the secret key"""
-        return {"result": "fluffy bunnies"}
-
-    @agent.tool
-    def concatenate(
-        a: Annotated[int | str, "First item"], b: Annotated[int | str, "Second item"]
-    ) -> dict[str, str]:
-        """Concatenates two items."""
-        return {"result": str(a) + str(b)}
-
-    @agent.tool
-    def get_orders(input: str | None = None) -> dict[str, str]:
-        """
-        Get the orders for a customer name. If input is None, get all orders.
-
-        Args:
-            input: the customer name
-        """
-        if isinstance(input, str):
-            return {"result": f"{input} has ordered 3 pairs of blue socks"}
-        return {
-            "result": "Billy has ordered 3 pairs of blue socks, Jean has ordered 5 pairs of red socks"
-        }
-
+    # otherwise to import it from external module
     # using an imported function as tool
     agent.tool(write_markdown_file)
     agent.tool(read_markdown_file)
@@ -112,6 +82,10 @@ def main() -> None:
         # debug tools
         if user_input.strip().lower() in {"/dt", "/debug_tools"}:
             pprint(agent.tools.get_schemas())
+            skip_querying = True
+
+        if user_input.strip().lower() in {"/dc", "/debug_context"}:
+            pprint(agent.prepare_context())
             skip_querying = True
 
         if not skip_querying:

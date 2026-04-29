@@ -1,5 +1,7 @@
 import json
+import os
 from dataclasses import dataclass, field
+from pathlib import Path
 from typing import Any, Callable
 
 import requests
@@ -39,6 +41,41 @@ class Agent:
         # contexts is a dictionary containing functions, the keys are the function names
         self.contexts[func.__name__] = func
         return func
+
+    def skill(self, skill_name: str) -> None:
+        # Get current working directory
+        cwd = os.getcwd()
+
+        # Check if we're already in skills directory
+        if cwd != "skills":
+            # Change to agent-space directory
+            try:
+                os.chdir(f"skills/{skill_name}")
+            except FileNotFoundError:
+                raise RuntimeError(
+                    f"Directory 'skills/{skill_name}' does not exist. Please create it first "
+                    "or run from the correct location."
+                )
+
+        # Construct full filename with .md extension
+        file_path = Path.cwd() / "SKILL.md"
+
+        try:
+            # Write the content to the file
+            with open(file_path, "r", encoding="utf-8") as f:
+                content = f.read()
+
+                def return_skill() -> str:
+                    return content
+
+                return_skill.__name__ = f"{skill_name}-skill"
+
+                self.context(return_skill)
+        except Exception as e:
+            raise RuntimeError(f"Failed to read file: {str(e)}")
+        finally:
+            # Always return to the original working directory
+            os.chdir(cwd)
 
     def prepare_context(self) -> list[dict[str, Any]]:
         """method that prepares a list of context info for the model
