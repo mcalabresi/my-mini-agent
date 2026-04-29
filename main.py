@@ -7,7 +7,6 @@ from agent import Agent
 from context_catalog import (
     current_date_time,
     my_files,
-    obsidian_writer_skill,
     user_context,
 )
 from helper_functions import message_debug
