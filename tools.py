@@ -5,6 +5,20 @@ from types import NoneType
 from typing import Annotated, Any, Callable, Final, Union, get_args, get_origin
 
 
+def truncate_long_args(**kwargs: dict[str, str]) -> dict[str, str]:
+    trunc_kwargs = {}
+    for key, value in kwargs.items():
+        t_value = value
+        if len(value) > 20:
+            t_value = str(value)[:20] + "..."
+        trunc_kwargs[key] = t_value
+    return trunc_kwargs
+
+
+def prYellow(s):
+    print("\033[93m {}\033[00m".format(s))
+
+
 @dataclass
 class Tools:
     """ "This class manages tools for the agent
@@ -168,7 +182,9 @@ class Tools:
             for k, v in args.items():
                 if v == "None":
                     args[k] = None
-            print(f">> Invoking function {fn_name} with arguments {args} <<")
+            prYellow(
+                f">> Invoking function {fn_name} with arguments {truncate_long_args(**args)} <<"
+            )
             result = fn(**args)
             return result if isinstance(result, dict) else {"result": result}
             # add a proper logger here

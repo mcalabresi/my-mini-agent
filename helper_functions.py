@@ -2,6 +2,7 @@
 
 from typing import Any
 
+import requests
 from rich.console import Console
 
 
@@ -33,3 +34,26 @@ def message_debug(console: Console, messages: list[dict[str, Any]]) -> None:
                 console.print(
                     f"Calling tool function '{fn.get('name')}' with arguments {fn.get('arguments')}"
                 )
+
+
+def get_model_context_window() -> int:
+    url = "http://localhost:1234/api/v1/models"
+    # as usual you need to pass an API Key and you are going to send json data as post
+    headers = {
+        "Authorization": 'Bearer "NO_API_KEY"',
+        "Content-Type": "application/json",
+    }
+    # here we make our post request, note that we send the whole list of messages, not just the last one
+    r = requests.get(
+        url,
+        headers=headers,
+        timeout=300,
+    )
+    r.raise_for_status()
+    # get the data ( parse the json response )
+    data = r.json()
+    model_info = data.get("models")[0]
+    loaded_instance = model_info.get("loaded_instances")[0]
+    cfg = loaded_instance.get("config")
+    context_length = cfg.get("context_length")
+    return context_length

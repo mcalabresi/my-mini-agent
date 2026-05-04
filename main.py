@@ -6,11 +6,11 @@ from rich.markdown import Markdown
 from agent import Agent
 from context_catalog import (
     current_date_time,
-    my_files,
+    # my_files,
     user_context,
 )
-from helper_functions import message_debug
-from tool_catalog import list_dir, read_markdown_file, write_markdown_file
+from helper_functions import get_model_context_window, message_debug
+from tool_catalog import add_link_to_index, list_notes, read_note, write_note
 
 
 def main() -> None:
@@ -21,8 +21,12 @@ def main() -> None:
     # invoke the agent
     agent = Agent(model="qwen/qwen3.5-9b")
 
-    # let's define a context function
+    total_context_tokens = get_model_context_window()
 
+    # let's modify the system prompt
+    agent.system_prompt = "You are a funny children stories writer. You use simple terms and write consistent narrative"
+
+    # let's define a context function
     # we can use the decorator that we defined as agent method if we want to define it here
     # @agent.context
     # def current_date_time() -> str:
@@ -33,8 +37,9 @@ def main() -> None:
     # or we import the function and add the context like this
     agent.context(current_date_time)
     agent.context(user_context)
-    agent.context(my_files)
+    # agent.context(my_files)
     agent.skill("obsidian-markdown-lite")
+    agent.skill("long-term-memory")
     # agent.context(obsidian_writer_skill)
 
     # example of defining a tool and registering on the fly
@@ -48,9 +53,10 @@ def main() -> None:
 
     # otherwise to import it from external module
     # using an imported function as tool
-    agent.tool(write_markdown_file)
-    agent.tool(read_markdown_file)
-    agent.tool(list_dir)
+    agent.tool(write_note)
+    agent.tool(read_note)
+    agent.tool(list_notes)
+    agent.tool(add_link_to_index)
 
     # we've got a logo to show just for fun (notice it's a raw string)
     my_mini_agent_logo = r"""
@@ -91,7 +97,7 @@ def main() -> None:
             # showing the spinner while the LLM thinks about what to say
             with console.status("[dim]Thinking...[/dim]", spinner="dots"):
                 # we send here the message to the Agent
-                response = agent.chat(user_input)
+                response, total_tokens = agent.chat(user_input)
 
             # we've got the response! Probably it's markdown so let's format it correctly
             markdown_response = Markdown(response)
@@ -99,6 +105,9 @@ def main() -> None:
             # we show this on the screen and we keep on with the loop
             console.print("[blue]Agent:[/blue] ", end="")
             console.print(markdown_response)
+            console.print(
+                f"Total used tokens: {(total_tokens / total_context_tokens) * 100:.2f}% ({total_tokens}/{total_context_tokens})"
+            )
 
 
 if __name__ == "__main__":

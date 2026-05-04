@@ -1,6 +1,6 @@
 ---
 name: obsidian-markdown-lite
-description: Create and edit Obsidian Flavored Markdown with wikilinks. Use when working with .md files in Obsidian.
+description: Create and edit Obsidian Flavored Markdown with wikilinks. 
 ---
 
 # Obsidian Flavored Markdown Skill
@@ -33,6 +33,3 @@ flowchart TD
     B -->|No| D[End]
     C --> D
 ```
-
-## Workflow when writing a new note
-After writing a new note you need to modify note "index" and put a wikilink to the newly created note with a brief description

@@ -2,7 +2,7 @@ import json
 import os
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Any, Callable
+from typing import Any, Callable, Tuple
 
 import requests
 
@@ -95,7 +95,7 @@ class Agent:
         ]
         return context_list
 
-    def chat(self, user_message: str) -> str:
+    def chat(self, user_message: str) -> Tuple[str, int]:
         """This functions allows chatting with the Agent
         :param user_message: str - the input from the user
         :return: str - the response message from the Agent
@@ -115,6 +115,7 @@ class Agent:
         # we will add it to messages and send all of this
         prefix: list[dict[str, Any]] = self.prepare_context()
 
+        # IMPORTANT THIS IS THE AGENT LOOP (REACT)
         # we introduce this loop to make sure each time we have a tool call
         # to perform we call back the API of the model . We can do also a max calls check here
         # to avoid infinite loop
@@ -146,6 +147,8 @@ class Agent:
             data = r.json()
             # print(f"{data=}")
             choices = data.get("choices")
+            usage = data.get("usage")
+            total_tokens = usage.get("total_tokens")
 
             # api should provide choices
             if not choices:
@@ -186,7 +189,7 @@ class Agent:
             agent_response = message.get("content") or ""
 
             if not tool_calls or len(tool_calls) == 0:
-                return agent_response
+                return (agent_response, total_tokens)
 
             for tool_call in tool_calls:
                 result = self.tools.execute(tool_call)

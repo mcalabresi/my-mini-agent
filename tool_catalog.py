@@ -50,14 +50,14 @@ def get_orders(input: str | None = None) -> dict[str, str]:
 # useful tools
 
 
-def write_markdown_file(
-    file_name: Annotated[str, "file name"], content: Annotated[str, "markdown content"]
+def write_note(
+    note_name: Annotated[str, "note name"], content: Annotated[str, "markdown content"]
 ) -> dict[str, str]:
     """
     Writes a markdown file to the agent-space directory.
 
     Args:
-        file_name: The filename without extension (e.g., "my-file")
+        note_name: The name of the note we want to write
         content: The markdown content to write to the file
 
     Returns:
@@ -78,13 +78,13 @@ def write_markdown_file(
             )
 
     # Construct full filename with .md extension
-    file_path = Path.cwd() / f"{file_name}.md"
+    file_path = Path.cwd() / f"{note_name}.md"
 
     try:
         # Write the content to the file
         with open(file_path, "w", encoding="utf-8") as f:
             f.write(content)
-        return {"result": f"✅ Successfully wrote '{file_name}.md' in agent-space"}
+        return {"result": f"✅ Successfully wrote '{note_name}.md' in agent-space"}
     except Exception as e:
         raise RuntimeError(f"Failed to write file: {str(e)}")
     finally:
@@ -92,15 +92,15 @@ def write_markdown_file(
         os.chdir(cwd)
 
 
-def read_markdown_file(file_name: Annotated[str, "file name"]) -> dict[str, str]:
+def read_note(note_name: Annotated[str, "note name"]) -> dict[str, str]:
     """
-    Reads a markdown file from the agent-space directory.
+    Reads a markdown note from the agent-space directory.
 
     Args:
-        file_name: The filename without extension (e.g., "my-file")
+        note_name: The filename without extension (e.g., "my-file")
 
     Returns:
-        the content of the file
+        the content of the note
     """
     # Get current working directory
     cwd = os.getcwd()
@@ -117,7 +117,7 @@ def read_markdown_file(file_name: Annotated[str, "file name"]) -> dict[str, str]
             )
 
     # Construct full filename with .md extension
-    file_path = Path.cwd() / f"{file_name}.md"
+    file_path = Path.cwd() / f"{note_name}.md"
 
     try:
         # Write the content to the file
@@ -125,28 +125,76 @@ def read_markdown_file(file_name: Annotated[str, "file name"]) -> dict[str, str]
             content = f.read()
         return {"result": content}
     except Exception as e:
-        raise RuntimeError(f"Failed to read file: {str(e)}")
+        # raise RuntimeError(f"Failed to read file: {str(e)}")
+        return {"result": f"note {note_name} does not exist yet"}
     finally:
         # Always return to the original working directory
         os.chdir(cwd)
 
 
-def list_dir() -> dict[str, str]:
+def list_notes() -> dict[str, str]:
     """
-    Lists the files and directories in agent-space.
+    Lists the notes in agent-space.
 
     Args:
         None
 
     Returns:
-        the list of files and directories
+        the list of notes
     """
 
     try:
         # Write the content to the file
         contents = os.listdir("./agent-space")
-        contents = [file for file in contents if file != ".obsidian"]
+        contents = [file.split(".")[0] for file in contents if file.endswith(".md")]
         result = f"[{', '.join(contents)}]"
         return {"result": result}
     except Exception as e:
-        raise RuntimeError(f"Failed to list files: {str(e)}")
+        raise RuntimeError(f"Failed to list notes: {str(e)}")
+
+
+def add_link_to_index(
+    index_note_name: Annotated[str, "index note name"],
+    note_file_name: Annotated[str, "note file name"],
+    note_description: Annotated[str, "note description"],
+) -> dict[str, str]:
+    """
+    Adds a link to an index file.
+
+    Args:
+        index_note_name: The name of the index file such as "index" or "<topic_name>-index"
+        note_file_name: The name of the note we want to add to index. The file name should be without extension (.md)
+        note_description: Short description of the link ( max 20 words)
+
+    Returns:
+        A confirmation message as {"result": "confirmation message"}
+    """
+    # Get current working directory
+    cwd = os.getcwd()
+
+    # Check if we're already in agent-space directory
+    if cwd != "agent-space":
+        # Change to agent-space directory
+        try:
+            os.chdir("agent-space")
+        except FileNotFoundError:
+            raise RuntimeError(
+                "Directory 'agent-space' does not exist. Please create it first "
+                "or run from the correct location."
+            )
+
+    # Construct full filename with .md extension
+    file_path = Path.cwd() / f"{index_note_name}.md"
+
+    try:
+        # Write the content to the file
+        with open(file_path, "a", encoding="utf-8") as f:
+            f.write(f"- **[[{note_file_name}]]** - {note_description}\n")
+        return {
+            "result": f"✅ Successfully added link to '{index_note_name}' in agent-space"
+        }
+    except Exception as e:
+        raise RuntimeError(f"Failed to write file: {str(e)}")
+    finally:
+        # Always return to the original working directory
+        os.chdir(cwd)
