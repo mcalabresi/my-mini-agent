@@ -4,19 +4,7 @@ from dataclasses import dataclass, field
 from types import NoneType
 from typing import Annotated, Any, Callable, Final, Union, get_args, get_origin
 
-
-def truncate_long_args(**kwargs: dict[str, str]) -> dict[str, str]:
-    trunc_kwargs = {}
-    for key, value in kwargs.items():
-        t_value = value
-        if len(value) > 20:
-            t_value = str(value)[:20] + "..."
-        trunc_kwargs[key] = t_value
-    return trunc_kwargs
-
-
-def prYellow(s):
-    print("\033[93m {}\033[00m".format(s))
+from helper_functions import prYellow, truncate_long_args
 
 
 @dataclass

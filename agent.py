@@ -2,10 +2,12 @@ import json
 import os
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Any, Callable, Tuple
+from typing import Any, Callable, Tuple, Union
 
 import requests
+from rich.markdown import Markdown
 
+from helper_functions import get_model_context_window, list_format, message_debug
 from tools import Tools
 
 
@@ -19,30 +21,34 @@ class Agent:
     # info about behaviour of the LLM
     system_prompt: str = "You are a helpful assistant"
     # this syntax below means that we will pass as values "functions" that take no argument and return a string
-    contexts: dict[str, Callable[[], str]] = field(default_factory=dict)
+    dynamic_context_functions: dict[str, Callable[[], str]] = field(
+        default_factory=dict
+    )
     messages: list[dict[str, Any]] = field(default_factory=list)
+    total_context_window_tokens: int = 0
 
     def __post_init__(self) -> None:
         # make sure there's  no trailing '/' at the end of url
         self.base_url = self.base_url.rstrip("/")
+        self.total_context_window_tokens = get_model_context_window(self.model)
 
-    def tool(self, func: Callable[..., Any]) -> Callable[..., Any]:
+    def add_tool(self, func: Callable[..., Any]) -> Callable[..., Any]:
         """ "Decorator to register tools
         :param func: Callable - the function we want to register as tool
         :return: Callable - the function that we passed as input
         """
         return self.tools.register(func)
 
-    def context(self, func: Callable[[], str]) -> Callable[[], str]:
+    def add_context_function(self, func: Callable[[], str]) -> Callable[[], str]:
         """Decorator to register context functions
         :param func: Callable - a function that we want to register, this should return a string
         :return: Callable - the function that we passed in input
         """
         # contexts is a dictionary containing functions, the keys are the function names
-        self.contexts[func.__name__] = func
+        self.dynamic_context_functions[func.__name__] = func
         return func
 
-    def skill(self, skill_name: str) -> None:
+    def add_skill(self, skill_name: str) -> None:
         # Get current working directory
         cwd = os.getcwd()
 
@@ -70,20 +76,20 @@ class Agent:
 
                 return_skill.__name__ = f"{skill_name}-skill"
 
-                self.context(return_skill)
+                self.add_context_function(return_skill)
         except Exception as e:
             raise RuntimeError(f"Failed to read file: {str(e)}")
         finally:
             # Always return to the original working directory
             os.chdir(cwd)
 
-    def prepare_context(self) -> list[dict[str, Any]]:
+    def prepare_system_context(self) -> list[dict[str, Any]]:
         """method that prepares a list of context info for the model
         :return: list[dict[str,Any]] - a list with the context info in a format liked by OpenAI api
         """
         # getting the context from the context functions we registered and rendering it in a xml style
         context_content = "<context>\n"
-        for ctx_func_name, ctx_func in self.contexts.items():
+        for ctx_func_name, ctx_func in self.dynamic_context_functions.items():
             context_content += f"<{ctx_func_name}>{ctx_func()}</{ctx_func_name}>\n"
         context_content += "</context>"
 
@@ -95,7 +101,7 @@ class Agent:
         ]
         return context_list
 
-    def chat(self, user_message: str) -> Tuple[str, int]:
+    def chat(self, user_message: str) -> Tuple[Union[str, Markdown], int]:
         """This functions allows chatting with the Agent
         :param user_message: str - the input from the user
         :return: str - the response message from the Agent
@@ -108,20 +114,30 @@ class Agent:
             When we receive a valid response we add it to the messages so that in further calls the model remembers of what it said just before.
 
         """
+        # first of all let's consider the case of slash-commands
+        # these will not trigger any call to the LLM but are used for debug or modifying the context / tools used
+        if user_message.startswith("/"):
+            return (self.slash_commands(user_message), 0)
+
         # take the message from the user and append it to messages
         self.messages.append({"role": "user", "content": user_message})
 
         # structuring our context and our system prompt specified at creation of the Agent
         # we will add it to messages and send all of this
-        prefix: list[dict[str, Any]] = self.prepare_context()
+        # this should be memoized
+        system_context: list[dict[str, Any]] = self.prepare_system_context()
 
         # IMPORTANT THIS IS THE AGENT LOOP (REACT)
         # we introduce this loop to make sure each time we have a tool call
         # to perform we call back the API of the model . We can do also a max calls check here
         # to avoid infinite loop
         while True:
-            api_kwargs = {"model": self.model, "messages": prefix + self.messages}
+            api_kwargs = {
+                "model": self.model,
+                "messages": system_context + self.messages,
+            }
 
+            # this should be memoized
             tool_schemas = self.tools.get_schemas()
             if tool_schemas:
                 api_kwargs["tools"] = tool_schemas
@@ -138,7 +154,7 @@ class Agent:
                 url,
                 headers=headers,
                 json=api_kwargs,
-                timeout=300,
+                timeout=3000,
             )
 
             # if there's an error raise it
@@ -189,7 +205,9 @@ class Agent:
             agent_response = message.get("content") or ""
 
             if not tool_calls or len(tool_calls) == 0:
-                return (agent_response, total_tokens)
+                # we've got the response! Probably it's markdown so let's format it correctly
+                markdown_response = Markdown(agent_response)
+                return (markdown_response, total_tokens)
 
             for tool_call in tool_calls:
                 result = self.tools.execute(tool_call)
@@ -200,3 +218,21 @@ class Agent:
                         "content": json.dumps(result),
                     }
                 )
+
+    def slash_commands(self, slash_command: str) -> str:
+        """manages slash commands
+
+        :param command: str - the slash command we give to the agent
+        :return: the output of the slash command in md format (as said by the Agent)"""
+        # debug messages
+        if slash_command.strip().lower() in {"/dm", "/debug_messages"}:
+            return message_debug(self.messages)
+
+        # debug tools
+        elif slash_command.strip().lower() in {"/dt", "/debug_tools"}:
+            return f"These are all my tool schemas: \n\n {list_format(self.tools.get_schemas())}"
+
+        elif slash_command.strip().lower() in {"/dc", "/debug_context"}:
+            return f"Here is my system context: \n\n{list_format(self.prepare_system_context())}"
+
+        return f"I don't know this command:  {slash_command}"

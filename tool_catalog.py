@@ -198,3 +198,52 @@ def add_link_to_index(
     finally:
         # Always return to the original working directory
         os.chdir(cwd)
+
+
+def edit_note(
+    note_name: Annotated[str, "note name"],
+    old_text: Annotated[str, "content to replace"],
+    new_text: Annotated[str, "content to add"],
+) -> dict[str, str]:
+    """
+    Edits a markdown file in the agent-space directory by replacing the old text with the new text
+
+    Args:
+        note_name: The name of the note we want to write
+        old_text: The old content to be replaced
+        new_text: The new content to be changed
+
+    Returns:
+        A confirmation message as {"result": "confirmation message"}
+    """
+    # Get current working directory
+    cwd = os.getcwd()
+
+    # Check if we're already in agent-space directory
+    if cwd != "agent-space":
+        # Change to agent-space directory
+        try:
+            os.chdir("agent-space")
+        except FileNotFoundError:
+            raise RuntimeError(
+                "Directory 'agent-space' does not exist. Please create it first "
+                "or run from the correct location."
+            )
+
+    # Construct full filename with .md extension
+    file_path = Path.cwd() / f"{note_name}.md"
+
+    try:
+        with open(file_path, "r+", encoding="utf-8") as f:
+            content = f.read()
+            # Write the content to the file
+            new_content = content.replace(old_text, new_text)
+            f.seek(0)
+            f.write(new_content)
+
+        return {"result": f"✅ Successfully edited '{note_name}.md' in agent-space"}
+    except Exception as e:
+        raise RuntimeError(f"Failed to edit file: {str(e)}")
+    finally:
+        # Always return to the original working directory
+        os.chdir(cwd)
