@@ -1,9 +1,19 @@
-from typing import Union
-
 from rich.console import Console
 from rich.markdown import Markdown
 
-from agent import Agent, load_agent
+from agent import Agent
+from context_catalog import (
+    current_date_time,
+    user_context,
+)
+
+from ..tool_catalog import (
+    add_link_to_index,
+    edit_note,
+    list_notes,
+    read_note,
+    write_note,
+)
 
 
 def main() -> None:
@@ -22,13 +32,56 @@ def main() -> None:
 
     console.print(f"[blue]{my_mini_agent_logo}[/blue]")
 
-    # loading a predefined agent
-    agent: Union[Agent, None] = load_agent("Bong")
+    ##############################################################
+    #                      Agent definition                      #
+    ##############################################################
 
+    # invoke the agent
+    # model_name = "google/gemma-4-e4b"
+    # agent = Agent(model="qwen/qwen3.5-9b")
+    agent = Agent(name="Bong")
+
+    total_context_tokens = agent.total_context_window_tokens
+
+    # let's modify the system prompt
+    agent.system_prompt = "You are a Bong, a reticent assistant, you answer briefly with as less words as possible. You use simple words and you return only your final output, not your internal thoughts"
+
+    # let's define a context function
+    # we can use the decorator that we defined as agent method if we want to define it here
+    # @agent.context_function
+    # def current_date_time() -> str:
+    #     return (
+    #         f"Current date and time: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}\n"
+    #     )
+
+    # or we import the function and add the context like this
+    agent.add_context_function(current_date_time)
+    agent.add_context_function(user_context)
+    # agent.context(my_files)
+    agent.add_skill("obsidian-markdown-lite")
+    agent.add_skill("long-term-memory")
+    # agent.context(obsidian_writer_skill)
+
+    # example of defining a tool and registering on the fly
+    # @agent.add_tool
+    # def add(
+    #     a: Annotated[int | float, "First number"],
+    #     b: Annotated[int | float, "Second number"],
+    # ) -> dict[str, int | float]:
+    #     """Add two numbers together."""
+    #     return {"result": a + b}
+
+    # otherwise to import it from external module
+    # using an imported function as tool
+    agent.add_tool(write_note)
+    agent.add_tool(read_note)
+    agent.add_tool(list_notes)
+    agent.add_tool(add_link_to_index)
+    agent.add_tool(edit_note)
+
+    # agent = load_agent("Bong")
     if agent is not None:
-        # get the total tokens in context window
         total_context_tokens = agent.total_context_window_tokens
-
         while True:
             # chat loop
             # user inputs the first message to the Agent
@@ -44,7 +97,6 @@ def main() -> None:
             with console.status("[dim]Thinking...[/dim]", spinner="dots"):
                 # we send here the message to the Agent
                 response = agent.chat(user_input)
-                # get the total tokens used so far
                 total_tokens = agent.tokens_used
 
             # we show the agent response on the screen and we keep on with the loop

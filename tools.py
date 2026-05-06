@@ -133,6 +133,11 @@ class Tools:
         }
 
     def get_schemas(self) -> list[dict[str, Any]]:
+        """Aappends all the schemas of the function tools in a dict that we pass as output
+
+        :return: dict - a dict of tool schemas in JSON format
+
+        """
         out: list[dict[str, Any]] = []
         for fn in self.tools.values():
             s = getattr(fn, self.TOOL_SCHEMA_ATTR, None)
@@ -141,14 +146,27 @@ class Tools:
         return out
 
     def register(self, func: Callable[..., Any]) -> Callable[..., Any]:
-        """decorator to register a tool
+        """Register a function as a tool, if no schema is available, it is created
 
         :param func: Callable[..., Any] - the function we want to become a tool
         :return: the original function
+
+        Notes:
+            When we register a function tool we are creating the corresponding schema and appending to the function
+            a special variable called __tool_schema__ with the tool schema in JSON format
         """
         if getattr(func, self.TOOL_SCHEMA_ATTR, None) is None:
             setattr(func, self.TOOL_SCHEMA_ATTR, self.schema_for_callable(func))
         self.tools[func.__name__] = func
+        return func
+
+    def unregister(self, func: Callable[..., Any]) -> Callable[..., Any]:
+        """decorator to unregister a tool
+
+        :param func: Callable[..., Any] - the function we want to become a tool
+        :return: the original function
+        """
+        self.tools.pop(func.__name__)
         return func
 
     def execute(self, tool_call: dict[str, Any]) -> dict[str, Any]:

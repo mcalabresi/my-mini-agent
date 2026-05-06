@@ -10,7 +10,11 @@ def message_debug(messages: list[dict[str, Any]]) -> str:
     """ "Show nicely the list of messages so far
     :param messages: list[dict[str,Any]] - list of messages
     :return: the messages in a way that can be parsed by rich console"""
-    output = "This is the list of messages exchanged so far:/n/n"
+
+    if len(messages) == 0:
+        return "the list of messages is empty!"
+
+    output = "This is the list of messages exchanged so far:\n\n"
     for message in messages:
         # print(f"{message=}")
         sender = message.get("role", "user")

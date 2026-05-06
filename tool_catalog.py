@@ -124,7 +124,7 @@ def read_note(note_name: Annotated[str, "note name"]) -> dict[str, str]:
         with open(file_path, "r", encoding="utf-8") as f:
             content = f.read()
         return {"result": content}
-    except Exception as e:
+    except Exception as _:
         # raise RuntimeError(f"Failed to read file: {str(e)}")
         return {"result": f"note {note_name} does not exist yet"}
     finally:

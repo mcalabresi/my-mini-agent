@@ -6,9 +6,12 @@ dist/
 wheels/
 *.egg-info
 
-# agent personal files
+# Agent personal files
 agent-space/*
 .obsidian
 
 # Virtual environments
 .venv
+
+# Env files
+.env
