@@ -23,7 +23,8 @@ def main() -> None:
     console.print(f"[blue]{my_mini_agent_logo}[/blue]")
 
     # loading a predefined agent
-    agent: Union[Agent, None] = load_agent("Bong")
+    # agent: Union[Agent, None] = load_agent("Bong")
+    agent: Union[Agent, None] = load_agent("Clive")
 
     if agent is not None:
         # get the total tokens in context window

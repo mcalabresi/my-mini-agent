@@ -10,7 +10,7 @@ from dotenv import load_dotenv
 import context_catalog
 import tool_catalog
 from agents_catalog import available_agents
-from helper_functions import get_model_context_window, list_format, message_debug
+from helper_functions import get_local_model_context_window, list_format, message_debug
 from tools import Tools
 
 
@@ -37,8 +37,11 @@ class Agent:
         self.model = os.getenv("MODEL_NAME") or ""
         self.api_key = os.getenv("API_KEY") or "NO_API_KEY"
         # make sure there's  no trailing '/' at the end of url
-        self.base_url = self.base_url.rstrip("/")
-        self.total_context_window_tokens = get_model_context_window(self.model)
+        self.base_url = (os.getenv("API_BASE_URL") or self.base_url).rstrip("/")
+        if "127.0.0.1" in self.base_url:
+            self.total_context_window_tokens = get_local_model_context_window(
+                self.model
+            )
 
     def add_tool(self, func: Callable[..., Any]) -> Callable[..., Any]:
         """ "Register a tool

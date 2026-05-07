@@ -1,7 +1,7 @@
 [project]
-name = "agent-tutorial"
+name = "my-mini-agent"
 version = "0.1.0"
-description = "Add your description here"
+description = "An AI agent running on your local machine"
 readme = "README.md"
 requires-python = ">=3.14"
 dependencies = [

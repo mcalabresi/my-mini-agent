@@ -41,7 +41,7 @@ def message_debug(messages: list[dict[str, Any]]) -> str:
     return output
 
 
-def get_model_context_window(model_name: str) -> int:
+def get_local_model_context_window(model_name: str) -> int:
     # this will work for LM Studio
     url = "http://localhost:1234/api/v1/models"
     # as usual you need to pass an API Key and you are going to send json data as post
@@ -68,7 +68,7 @@ def get_model_context_window(model_name: str) -> int:
         context_length = cfg.get("context_length")
     except Exception as e:
         context_length = 0
-        print("Cannot get total_context_tokens: ", str(e))
+        print("Cannot get total context tokens: ", str(e))
 
     return context_length
 
