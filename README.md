@@ -38,6 +38,7 @@ API_BASE_URL=http://127.0.0.1:1234/v1
 ```
 Of course you can change these info to target other models /  local or remote
 So far I tried with Mistral
+* create a folder named "agent-space" which is a sandbox for the agents (at least with the actual tools)
 
 # launching your chat with an agent
 choose an example (files ending with _example.py)
