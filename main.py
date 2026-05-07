@@ -23,8 +23,8 @@ def main() -> None:
     console.print(f"[blue]{my_mini_agent_logo}[/blue]")
 
     # loading a predefined agent
-    # agent: Union[Agent, None] = load_agent("Bong")
-    agent: Union[Agent, None] = load_agent("Clive")
+    agent: Union[Agent, None] = load_agent("Bong")
+    # agent: Union[Agent, None] = load_agent("Clive")
 
     if agent is not None:
         # get the total tokens in context window
@@ -49,7 +49,7 @@ def main() -> None:
                 total_tokens = agent.tokens_used
 
             # we show the agent response on the screen and we keep on with the loop
-            console.print("[blue]Agent:[/blue] ", end="")
+            console.print(f"[blue]{agent.name}:[/blue] ", end="")
             # agent will respond as a Markdown Object (coming from rich console), we put this in a separate line
             if not user_input.startswith("/"):
                 markdown_response = Markdown(response)
@@ -57,10 +57,13 @@ def main() -> None:
             else:
                 console.print(response)
 
+            # show total token utilization if model is local
             if total_tokens > 0 and total_context_tokens > 0:
                 console.print(
                     f"Context window utilization: {(total_tokens / total_context_tokens) * 100:.2f}% ({total_tokens}/{total_context_tokens})"
                 )
+            elif total_tokens > 0 and total_context_tokens == 0:
+                console.print(f"Total tokens used so far: {total_tokens}")
 
 
 if __name__ == "__main__":
