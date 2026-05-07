@@ -1,6 +1,52 @@
+---
+author: Marcello Calabresi
+---
+
 # My Mini Agent
 
-A small AI agent working on local LLM via LM Studio
+A small AI agent to experiment with agents
+
+# what is it?
+It's an Agent ! It can run on local or remote models. It has:
+* dynamic context definition
+* tools
+* skills
+* slash-commands to debug your agent, run terminal commands, mess up with its memory, etc
+* you can easily define an agent and load it
+* also the code is fully commented so you can learn how an agent works!
+
+# prerequisites
+* Python 3 installed
+* You need to have uv installed -> https://docs.astral.sh/uv/getting-started/installation/
+* If you want to use local agents you need to download a launcher / server for your LLMs
+* such as LM Studio or Ollama
+* You also need to download a model to run. My preference so far goes to qwen/qwen3.5-9b
+* You need to load a model and start the server so that the agent can reach it
+
+# how to install
+* Clone this repo
+> cd my-mini-agent
+* run the following command in your terminal 
+>  uv sync
+* create a .env file at the root of the project
+and populate it with the following keys
+```yaml
+# QWEN - local
+MODEL_NAME=qwen/qwen3.5-9b
+API_KEY=NO_API_KEY
+API_BASE_URL=http://127.0.0.1:1234/v1
+```
+Of course you can change these info to target other models /  local or remote
+So far I tried with Mistral
+
+# launching your chat with an agent
+choose an example (files ending with _example.py)
+> uv run simple_agent_example.py
+
+Remember these files are meant mostly to be read than to be used
+There are many more agents out there who are way more polished than this
+
+once you are tired of speaking with the agent just send "bye" or "quit" or "ciao"
 
 # Acknowledgments
 
@@ -10,13 +56,10 @@ https://www.youtube.com/playlist?list=PL4KX3oEgJcfcPez5tpvsdC1ghaNFo1Bhc
 
 github repo: https://github.com/indently/ai_agent_python
 
-The code he used was written by 
+The original code he used was written by 
 Miss Cthulian Coder, Insanity by Design. Blog: https://AlyceOsbourne.github.io
 
-Prerequisites:
-having python 3 and uv installed
-
-Having a local LLM server running ( in the tutorial we use ML Studio with model Qwen 3.5-9b ) or eventually an API Key for OpenAI / Anthropic etc
+part of it is still present here, so thanks Miss Cthulian Coder!
 
 ## what is new so far
 
@@ -26,11 +69,4 @@ Having a local LLM server running ( in the tutorial we use ML Studio with model 
 * added skills system
 * added token counter for keeping an eye on the context window
 * context catalog, tool catalog and agents catalog
-
-
-
-## starting the agent
-python main.py
-
-## exiting 
-put "quit" or "bye" or "exit" as prompt
+* added .env to keep your secrets secret

@@ -6,8 +6,8 @@ from context_catalog import (
     current_date_time,
     user_context,
 )
-
-from ..tool_catalog import (
+from helper_functions import getTokenUtilization
+from tool_catalog import (
     add_link_to_index,
     edit_note,
     list_notes,
@@ -100,7 +100,7 @@ def main() -> None:
                 total_tokens = agent.tokens_used
 
             # we show the agent response on the screen and we keep on with the loop
-            console.print("[blue]Agent:[/blue] ", end="")
+            console.print(f"[blue]{agent.name}:[/blue] ", end="")
             # agent will respond as a Markdown Object (coming from rich console), we put this in a separate line
             if not user_input.startswith("/"):
                 markdown_response = Markdown(response)
@@ -108,10 +108,8 @@ def main() -> None:
             else:
                 console.print(response)
 
-            if total_tokens > 0 and total_context_tokens > 0:
-                console.print(
-                    f"Context window utilization: {(total_tokens / total_context_tokens) * 100:.2f}% ({total_tokens}/{total_context_tokens})"
-                )
+            # show info about token utilization
+            console.print(getTokenUtilization(total_tokens, total_context_tokens))
 
 
 if __name__ == "__main__":

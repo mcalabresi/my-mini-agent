@@ -89,3 +89,18 @@ def truncate_long_args(**kwargs: dict[str, str]) -> dict[str, str]:
 
 def prYellow(s):
     print("\033[93m {}\033[00m".format(s))
+
+
+def getTokenUtilization(used_tokens: int, total_context_tokens: int) -> str:
+    """Provides info on token utilization
+
+    :param used_tokens: int - number of used tokens
+    :param total_context_tokens: int - number of total tokens in the context window
+    """
+    # show total token utilization if model is local
+    if used_tokens > 0 and total_context_tokens > 0:
+        return f"Context window utilization: {(used_tokens / total_context_tokens) * 100:.2f}% ({used_tokens}/{total_context_tokens})"
+
+    elif used_tokens > 0 and total_context_tokens == 0:
+        return f"Total tokens used so far: {used_tokens}"
+    return ""
