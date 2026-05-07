@@ -1,8 +1,7 @@
 ---
 name: long-term-memory
 description: Manage long-term memory in the Obsidian vault.
------------------------------------------------------------
-
+---
 # Long-term memory management
 
 Store and retrieve information in the Obsidian vault **"agent-space"**, using markdown notes.
