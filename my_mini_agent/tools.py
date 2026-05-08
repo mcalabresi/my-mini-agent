@@ -4,7 +4,7 @@ from dataclasses import dataclass, field
 from types import NoneType
 from typing import Annotated, Any, Callable, Final, Union, get_args, get_origin
 
-from helper_functions import prYellow, truncate_long_args
+from my_mini_agent.utils.helper_functions import prYellow, truncate_long_args
 
 
 @dataclass

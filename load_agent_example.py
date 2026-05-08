@@ -3,8 +3,8 @@ from typing import Union
 from rich.console import Console
 from rich.markdown import Markdown
 
-from agent import Agent, load_agent
-from helper_functions import getTokenUtilization
+from my_mini_agent.agent import Agent, load_agent
+from my_mini_agent.utils.helper_functions import getTokenUtilization
 
 
 def main() -> None:

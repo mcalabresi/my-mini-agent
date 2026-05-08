@@ -7,11 +7,14 @@ from typing import Any, Callable, Union
 import requests
 from dotenv import load_dotenv
 
-import context_catalog
-import tool_catalog
-from agents_catalog import available_agents
-from helper_functions import get_local_model_context_window, list_format, message_debug
-from tools import Tools
+from my_mini_agent import context_catalog, tool_catalog
+from my_mini_agent.agents_catalog import available_agents
+from my_mini_agent.tools import Tools
+from my_mini_agent.utils.helper_functions import (
+    get_local_model_context_window,
+    list_format,
+    message_debug,
+)
 
 
 @dataclass

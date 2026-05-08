@@ -8,8 +8,8 @@
 from rich.console import Console
 from rich.markdown import Markdown
 
-from agent import load_agent
-from helper_functions import getTokenUtilization
+from my_mini_agent.agent import load_agent
+from my_mini_agent.utils.helper_functions import getTokenUtilization
 
 
 def main() -> None:
@@ -53,8 +53,6 @@ def main() -> None:
         with console.status("[dim]Thinking...[/dim]", spinner="dots"):
             # we send here the message to the Agent
             first_draft = writing_agent.chat(write_first_draft_template)
-            # get the total tokens used so far
-            total_tokens = writing_agent.tokens_used
 
         # we show the agent response on the screen and we keep on with the loop
         console.print(f"[blue]{writing_agent.name}:[/blue] ", end="")
@@ -73,8 +71,6 @@ def main() -> None:
         with console.status("[dim]Thinking...[/dim]", spinner="dots"):
             # we send here the message to the Agent
             critic_review = critic_agent.chat(critic_first_draft_template)
-            # get the total tokens used so far
-            total_tokens += writing_agent.tokens_used
 
         # we show the agent response on the screen and we keep on with the loop
         console.print(f"[orange1]{critic_agent.name}:[/orange1] ", end="")
@@ -93,8 +89,6 @@ def main() -> None:
         with console.status("[dim]Thinking...[/dim]", spinner="dots"):
             # we send here the message to the Agent
             final_draft = writing_agent.chat(write_second_draft_template)
-            # get the total tokens used so far
-            total_tokens += writing_agent.tokens_used
 
         # we show the agent response on the screen and we keep on with the loop
         console.print(f"[blue]{writing_agent.name}:[/blue] ", end="")
@@ -103,6 +97,8 @@ def main() -> None:
         console.print(markdown_response)
 
         # show info about token utilization
+        # get the total tokens used so far
+        total_tokens = writing_agent.tokens_used + critic_agent.tokens_used
         console.print(getTokenUtilization(total_tokens, total_context_tokens))
 
 

@@ -1,19 +1,19 @@
 from rich.console import Console
 from rich.markdown import Markdown
 
-from agent import Agent
-from context_catalog import (
+from my_mini_agent.agent import Agent
+from my_mini_agent.context_catalog import (
     current_date_time,
     user_context,
 )
-from helper_functions import getTokenUtilization
-from tool_catalog import (
+from my_mini_agent.tool_catalog import (
     add_link_to_index,
     edit_note,
     list_notes,
     read_note,
     write_note,
 )
+from my_mini_agent.utils.helper_functions import getTokenUtilization
 
 
 def main() -> None:
