@@ -5,6 +5,8 @@
 # the writer makes the corrections and then saves the story in the agent-space
 
 
+import asyncio
+
 from rich.console import Console
 from rich.markdown import Markdown
 
@@ -12,7 +14,7 @@ from my_mini_agent.agent import load_agent
 from my_mini_agent.utils.helper_functions import getTokenUtilization
 
 
-def main() -> None:
+async def main() -> None:
     """Main for MyMiniAgent"""
     # invoke rich Console, we are going to need it for displaying nice stuff in the terminal
     console = Console()
@@ -52,7 +54,7 @@ def main() -> None:
         # showing the spinner while the LLM thinks about what to say
         with console.status("[dim]Thinking...[/dim]", spinner="dots"):
             # we send here the message to the Agent
-            first_draft = writing_agent.chat(write_first_draft_template)
+            first_draft = await writing_agent.chat(write_first_draft_template)
 
         # we show the agent response on the screen and we keep on with the loop
         console.print(f"[blue]{writing_agent.name}:[/blue] ", end="")
@@ -70,7 +72,7 @@ def main() -> None:
         # showing the spinner while the LLM thinks about what to say
         with console.status("[dim]Thinking...[/dim]", spinner="dots"):
             # we send here the message to the Agent
-            critic_review = critic_agent.chat(critic_first_draft_template)
+            critic_review = await critic_agent.chat(critic_first_draft_template)
 
         # we show the agent response on the screen and we keep on with the loop
         console.print(f"[orange1]{critic_agent.name}:[/orange1] ", end="")
@@ -88,7 +90,7 @@ def main() -> None:
         # showing the spinner while the LLM thinks about what to say
         with console.status("[dim]Thinking...[/dim]", spinner="dots"):
             # we send here the message to the Agent
-            final_draft = writing_agent.chat(write_second_draft_template)
+            final_draft = await writing_agent.chat(write_second_draft_template)
 
         # we show the agent response on the screen and we keep on with the loop
         console.print(f"[blue]{writing_agent.name}:[/blue] ", end="")
@@ -103,4 +105,4 @@ def main() -> None:
 
 
 if __name__ == "__main__":
-    main()
+    asyncio.run(main())

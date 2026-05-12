@@ -4,7 +4,7 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any, Callable, Union
 
-import requests
+import httpx
 from dotenv import load_dotenv
 
 from my_mini_agent import context_catalog, tool_catalog
@@ -125,7 +125,7 @@ class Agent:
         ]
         return context_list
 
-    def chat(self, user_message: str) -> str:
+    async def chat(self, user_message: str) -> str:
         """Chat with the Agent
         :param user_message: str - the input from the user
         :return: str - the response message from the Agent
@@ -185,80 +185,81 @@ class Agent:
                 "Content-Type": "application/json",
             }
             # here we make our post request, note that we send the whole list of messages, not just the last one
-            r = requests.post(
-                url,
-                headers=headers,
-                json=api_kwargs,
-                timeout=3000,
-            )
+            async with httpx.AsyncClient() as client:
+                r = await client.post(
+                    url,
+                    headers=headers,
+                    json=api_kwargs,
+                    timeout=3000,
+                )
 
-            # if there's an error raise it
-            r.raise_for_status()
-            # get the data ( parse the json response from the LLM )
-            data = r.json()
-            # print(f"{data=}")
-            choices = data.get("choices")
-            usage = data.get("usage")
-            total_tokens = usage.get("total_tokens")
-            # update the token count
-            self.tokens_used = total_tokens
-            # api should provide choices
-            if not choices:
-                raise RuntimeError("Model response missing choices")
+                # if there's an error raise it
+                # r.raise_for_status()
+                # get the data ( parse the json response from the LLM )
+                data = r.json()
+                # print(f"{data=}")
+                choices = data.get("choices")
+                usage = data.get("usage")
+                total_tokens = usage.get("total_tokens")
+                # update the token count
+                self.tokens_used = total_tokens
+                # api should provide choices
+                if not choices:
+                    raise RuntimeError("Model response missing choices")
 
-            # the response is in the first choice
-            message = choices[0].get("message")
+                # the response is in the first choice
+                message = choices[0].get("message")
 
-            if message is None:
-                # LLM responded nothing, is it an error?
-                raise RuntimeError("Model response missing message")
+                if message is None:
+                    # LLM responded nothing, is it an error?
+                    raise RuntimeError("Model response missing message")
 
-            # extracting the eventual tool_calls from LLM
-            tool_calls = message.get("tool_calls") or []
+                # extracting the eventual tool_calls from LLM
+                tool_calls = message.get("tool_calls") or []
 
-            # we create a list of dicts to specify the tool calls
-            formatted_tool_calls_list = [
-                {
-                    "id": tc.get("id"),
-                    "type": tc.get("type"),
-                    "function": {
-                        "name": (tc.get("function") or {}).get("name"),
-                        "arguments": (tc.get("function") or {}).get("arguments"),
-                    },
-                }
-                for tc in tool_calls
-            ]
+                # we create a list of dicts to specify the tool calls
+                formatted_tool_calls_list = [
+                    {
+                        "id": tc.get("id"),
+                        "type": tc.get("type"),
+                        "function": {
+                            "name": (tc.get("function") or {}).get("name"),
+                            "arguments": (tc.get("function") or {}).get("arguments"),
+                        },
+                    }
+                    for tc in tool_calls
+                ]
 
-            # we append it to the messages to keep track
-            self.messages.append(
-                {
-                    "role": "assistant",
-                    "content": message.get("content"),
-                    "tool_calls": formatted_tool_calls_list,
-                }
-            )
-
-            # finally we extract the agent's response
-            agent_response = message.get("content") or ""
-
-            # Case in which there is no tool call, the LLM just responds some text
-            if not tool_calls or len(tool_calls) == 0:
-                return agent_response
-
-            # Case in which there is a list of tool calls
-            for tool_call in tool_calls:
-                # we execute each tool call and append the result into messages
-                result = self.tools.execute(tool_call)
+                # we append it to the messages to keep track
                 self.messages.append(
                     {
-                        "role": "tool",
-                        "tool_call_id": tool_call.get("id"),
-                        "content": json.dumps(result),
+                        "role": "assistant",
+                        "content": message.get("content"),
+                        "tool_calls": formatted_tool_calls_list,
                     }
                 )
-                # notice we don't return, after all tools are called we will
-                # call again the model with the new message list containing the result
-                # of the tool calls.
+
+                # finally we extract the agent's response
+                agent_response = message.get("content") or ""
+
+                # Case in which there is no tool call, the LLM just responds some text
+                if not tool_calls or len(tool_calls) == 0:
+                    return agent_response
+
+                # Case in which there is a list of tool calls
+                for tool_call in tool_calls:
+                    # we execute each tool call and append the result into messages
+                    result = self.tools.execute(tool_call)
+                    self.messages.append(
+                        {
+                            "role": "tool",
+                            "tool_call_id": tool_call.get("id"),
+                            "content": json.dumps(result),
+                        }
+                    )
+                    # notice we don't return, after all tools are called we will
+                    # call again the model with the new message list containing the result
+                    # of the tool calls.
 
     def slash_commands(self, slash_command: str) -> str:
         """manages slash commands

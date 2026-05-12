@@ -1,3 +1,5 @@
+import asyncio
+
 from rich.console import Console
 from rich.markdown import Markdown
 
@@ -16,7 +18,7 @@ from my_mini_agent.tool_catalog import (
 from my_mini_agent.utils.helper_functions import getTokenUtilization
 
 
-def main() -> None:
+async def main() -> None:
     """Main for MyMiniAgent"""
     # invoke rich Console, we are going to need it for displaying nice stuff in the terminal
     console = Console()
@@ -96,7 +98,7 @@ def main() -> None:
             # showing the spinner while the LLM thinks about what to say
             with console.status("[dim]Thinking...[/dim]", spinner="dots"):
                 # we send here the message to the Agent
-                response = agent.chat(user_input)
+                response = await agent.chat(user_input)
                 total_tokens = agent.tokens_used
 
             # we show the agent response on the screen and we keep on with the loop
@@ -113,4 +115,4 @@ def main() -> None:
 
 
 if __name__ == "__main__":
-    main()
+    asyncio.run(main())

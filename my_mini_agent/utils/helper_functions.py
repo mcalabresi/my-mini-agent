@@ -3,7 +3,7 @@
 from pprint import pformat
 from typing import Any, Dict, List
 
-import requests
+import httpx
 
 
 def message_debug(messages: list[dict[str, Any]]) -> str:
@@ -50,7 +50,7 @@ def get_local_model_context_window(model_name: str) -> int:
         "Content-Type": "application/json",
     }
     # here we make our post request, note that we send the whole list of messages, not just the last one
-    r = requests.get(
+    r = httpx.get(
         url,
         headers=headers,
         timeout=300,
