@@ -75,7 +75,7 @@ In this specific example I load an agent who doesn't like to speak much, I calle
         "skills": [],
         "tools": ["read_note"],
     },
-    ```
+```
 
 
 ## workflow
