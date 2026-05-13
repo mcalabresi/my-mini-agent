@@ -36,7 +36,10 @@ def message_debug(messages: list[dict[str, Any]]) -> str:
         if (tool_calls := message.get("tool_calls", [])) and len(tool_calls) > 0:
             for tc in tool_calls:
                 fn = tc.get("function", {})
-                output += f"[orange1]Calling tool function '{fn.get('name')}' with arguments {truncate_long_args(**fn.get('arguments'))}[/orange1] \n"
+                arguments = fn.get("arguments")
+                if isinstance(arguments, dict):
+                    arguments = truncate_long_args(**arguments)
+                output += f"[orange1]Calling tool function '{fn.get('name')}' with arguments {arguments}[/orange1] \n"
 
     return output
 

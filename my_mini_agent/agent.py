@@ -9,6 +9,7 @@ from dotenv import load_dotenv
 
 from my_mini_agent import context_catalog, tool_catalog
 from my_mini_agent.agents_catalog import available_agents
+from my_mini_agent.mcp_client import MCPClient
 from my_mini_agent.tools import Tools
 from my_mini_agent.utils.helper_functions import (
     get_local_model_context_window,
@@ -34,13 +35,15 @@ class Agent:
     messages: list[dict[str, Any]] = field(default_factory=list)
     total_context_window_tokens: int = 0
     tokens_used: int = 0
+    mcp_clients: list[MCPClient] = field(default_factory=list)
+    mcp_tools_schemas: list[Any] = field(default_factory=list)
 
     def __post_init__(self) -> None:
         load_dotenv()
         self.model = os.getenv("MODEL_NAME") or ""
-        self.api_key = os.getenv("API_KEY") or "NO_API_KEY"
+        self.api_key = os.getenv("MODEL_API_KEY") or "NO_API_KEY"
         # make sure there's  no trailing '/' at the end of url
-        self.base_url = (os.getenv("API_BASE_URL") or self.base_url).rstrip("/")
+        self.base_url = (os.getenv("MODEL_API_BASE_URL") or self.base_url).rstrip("/")
         if "127.0.0.1" in self.base_url:
             self.total_context_window_tokens = get_local_model_context_window(
                 self.model
@@ -52,6 +55,27 @@ class Agent:
         :return: Callable - the function that we passed as input
         """
         return self.tools.register(func)
+
+    def add_mcp_tool(self, tool_name, mcp_client: MCPClient):
+        if (
+            mcp_client is not None
+            and mcp_client.available_tools
+            and len(mcp_client.available_tools) > 0
+            and tool_name in mcp_client.tool_names_list
+        ):
+            tool = [t for t in mcp_client.available_tools if t.name == tool_name][0]
+            schema = MCPClient.schema_for_mcp_tool(tool)
+            self.mcp_tools_schemas.append(schema)
+
+    def add_all_mcp_tools(self, mcp_client: MCPClient):
+        if (
+            mcp_client is not None
+            and mcp_client.available_tools
+            and len(mcp_client.available_tools) > 0
+        ):
+            for tool in mcp_client.available_tools:
+                schema = MCPClient.schema_for_mcp_tool(tool)
+                self.mcp_tools_schemas.append(schema)
 
     def add_context_function(self, func: Callable[[], str]) -> Callable[[], str]:
         """Register a context function
@@ -174,8 +198,9 @@ class Agent:
             }
 
             tool_schemas = self.tools.get_schemas()
+
             if tool_schemas:
-                api_kwargs["tools"] = tool_schemas
+                api_kwargs["tools"] = tool_schemas + self.mcp_tools_schemas
 
             # open-ai style API endpoint
             url = f"{self.base_url}/chat/completions"
@@ -184,6 +209,7 @@ class Agent:
                 "Authorization": f"Bearer {self.api_key}",
                 "Content-Type": "application/json",
             }
+            # print(" API KWARGS :", api_kwargs)
             # here we make our post request, note that we send the whole list of messages, not just the last one
             async with httpx.AsyncClient() as client:
                 r = await client.post(
@@ -192,9 +218,9 @@ class Agent:
                     json=api_kwargs,
                     timeout=3000,
                 )
-
+                # print(r.text)
                 # if there's an error raise it
-                # r.raise_for_status()
+                r.raise_for_status()
                 # get the data ( parse the json response from the LLM )
                 data = r.json()
                 # print(f"{data=}")
@@ -249,14 +275,32 @@ class Agent:
                 # Case in which there is a list of tool calls
                 for tool_call in tool_calls:
                     # we execute each tool call and append the result into messages
-                    result = self.tools.execute(tool_call)
-                    self.messages.append(
-                        {
-                            "role": "tool",
-                            "tool_call_id": tool_call.get("id"),
-                            "content": json.dumps(result),
-                        }
-                    )
+                    # print("\n I AM INTO TOOL CALL \n")
+                    # print(f"{tool_call=}")
+                    fn = tool_call.get("function")
+                    fn_name = fn.get("name")
+                    # is it an MCP call?
+                    is_MCP_call = False
+                    for mcp_client in self.mcp_clients:
+                        if fn_name in mcp_client.tool_names_list:
+                            is_MCP_call = True
+                            result = await mcp_client.execute(tool_call)
+                            self.messages.append(
+                                {
+                                    "role": "tool",
+                                    "tool_call_id": tool_call.get("id"),
+                                    "content": json.dumps(result),
+                                }
+                            )
+                    if not is_MCP_call:
+                        result = self.tools.execute(tool_call)
+                        self.messages.append(
+                            {
+                                "role": "tool",
+                                "tool_call_id": tool_call.get("id"),
+                                "content": json.dumps(result),
+                            }
+                        )
                     # notice we don't return, after all tools are called we will
                     # call again the model with the new message list containing the result
                     # of the tool calls.
@@ -272,7 +316,8 @@ class Agent:
 
         # debug tools
         elif slash_command.strip().lower() in {"/dt", "/debug_tools"}:
-            return f"These are all my tool schemas: \n\n {list_format(self.tools.get_schemas())}"
+            total_schemas = self.tools.get_schemas() + self.mcp_tools_schemas
+            return f"These are all my tool schemas: \n\n {list_format(total_schemas)}"
 
         # debug messages
         elif slash_command.strip().lower() in {"/dc", "/debug_context"}:
@@ -318,3 +363,17 @@ def load_agent(agent_name: str) -> Union[Agent, None]:
         new_agent.add_tool(tool_function)
 
     return new_agent
+
+
+"""
+Note to self. it's better that the agent connects and disconnects the mcp servers as there is just one AsyncExitStack
+
+from contextlib import AsyncExitStack
+
+self.exit_stack = AsyncExitStack()
+streams = await self.exit_stack.enter_async_context(sse_client())
+session = await self.exit_stack.enter_async_context(session_client())
+
+# Later, cleanup
+await self.exit_stack.aclose()
+"""
