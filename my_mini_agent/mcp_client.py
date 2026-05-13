@@ -148,6 +148,11 @@ class MCPClient:
         print(f"closing connection with MCP server {self.name}")
         if self.session is not None:
             try:
-                return await self.exit_stack.aclose()
-            except CancelledError:
+                await self.exit_stack.aclose()
+            except CancelledError as e:
+                print(f"CancelledError: {e}")
                 print("Something went wrong during disconnection")
+            except RuntimeError as rte:
+                print(f"RuntimeError: {rte}")
+            else:
+                print(f"closed correctly the connection with {self.name}")

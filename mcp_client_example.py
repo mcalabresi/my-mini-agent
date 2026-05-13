@@ -31,10 +31,10 @@ async def main() -> None:
 
     if agent is not None:
         # connect with MCP servers
-        # imageMCP = await MCPClient("imageMCP").connect()
-        # if imageMCP is not None:
-        #     agent.mcp_clients.append(imageMCP)
-        #     agent.add_all_mcp_tools(imageMCP)
+        imageMCP = await MCPClient("imageMCP").connect()
+        if imageMCP is not None:
+            agent.mcp_clients.append(imageMCP)
+            agent.add_all_mcp_tools(imageMCP)
 
         pixserp = await MCPClient("pixserp").connect()
         if pixserp is not None:
@@ -53,10 +53,11 @@ async def main() -> None:
             # one of these keywords trigger the end of the loop
             if user_input.strip().lower() in {"quit", "exit", "bye", "ciao", "q"}:
                 console.print("[dim]Goodbye![/dim]")
-                # if imageMCP is not None:
-                #     await imageMCP.disconnect()
+                # IMPORTANT: To avoid issues close the MCP clients in reverse order respect to the connection order!
                 if pixserp is not None:
                     await pixserp.disconnect()
+                if imageMCP is not None:
+                    await imageMCP.disconnect()
                 return
 
             # showing the spinner while the LLM thinks about what to say
