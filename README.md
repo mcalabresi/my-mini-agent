@@ -75,7 +75,7 @@ In this specific example I load an agent who doesn't like to speak much, I calle
         "skills": [],
         "tools": ["read_note"],
     },
-    ```
+```
 
 
 ## workflow
@@ -109,7 +109,7 @@ In practice we will get the api key from .env file and recreate the env property
 * You can add mcp servers in mcp_catalog. Remember you need also to add mcp tools to your agent ( see mcp_client_example.py)
 
 # How much help did I get from other agents to do this agent? 
-Nearly 0%. I asked chatGPT some help for doing some tools but the rest comes from 'old-school' coding, following tutorials, reading articles, etc. The important is not the destination but the journey and clearly this is a project to learn the capabilities of Agentic AI.
+Not a lot really. I asked chatGPT some help for doing some tools and skills but the rest comes from 'old-school' coding, following tutorials, reading articles, etc. The important is not the destination but the journey and clearly this is a project to learn the capabilities of Agentic AI.
 
 # Acknowledgments
 
