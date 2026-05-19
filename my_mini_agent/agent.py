@@ -4,6 +4,7 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any, Callable, Union
 
+import aiofiles
 import httpx
 from dotenv import load_dotenv
 
@@ -15,7 +16,9 @@ from my_mini_agent.utils.helper_functions import (
     get_local_model_context_window,
     list_format,
     message_debug,
+    prYellow,
 )
+from my_mini_agent.utils.helper_skills import extract_skills_frontmatters
 
 
 @dataclass
@@ -86,7 +89,7 @@ class Agent:
         self.dynamic_context_functions[func.__name__] = func
         return func
 
-    def add_skill(self, skill_name: str) -> None:
+    async def add_skill(self, skill_name: str) -> None:
         """Add a skill to the context
 
         :skill_name: str - The name of the skill.
@@ -95,6 +98,9 @@ class Agent:
         Each skill should have its folder with name skill_name.
         Inside this folder we need a file named SKILL.md
         """
+        if not skill_name:
+            print("empty skillname")
+            return
         # Get current working directory
         cwd = os.getcwd()
 
@@ -114,8 +120,9 @@ class Agent:
 
         try:
             # Write the content to the file
-            with open(file_path, "r", encoding="utf-8") as f:
-                content = f.read()
+
+            async with aiofiles.open(file_path, "r", encoding="utf-8") as f:
+                content = await f.read()
 
                 def return_skill() -> str:
                     return content
@@ -128,6 +135,15 @@ class Agent:
         finally:
             # Always return to the original working directory
             os.chdir(cwd)
+
+    async def define_skillset(self, skillset: list[str]):
+        available_skills_text = await extract_skills_frontmatters("skills", skillset)
+
+        def available_skills() -> str:
+            instructions = "Here are all the available skills. If you need to use one of them call tool `read_skill` with parameter skill_name set to skill `name` \n\n"
+            return instructions + available_skills_text
+
+        self.add_context_function(available_skills)
 
     def prepare_system_context(self) -> list[dict[str, Any]]:
         """method that prepares a list of context info for the model
@@ -293,7 +309,16 @@ class Agent:
                                 }
                             )
                     if not is_MCP_call:
-                        result = self.tools.execute(tool_call)
+                        if fn_name == "read_skill":
+                            fn_payload = tool_call.get("function") or {}
+                            args = json.loads(fn_payload.get("arguments") or "{}")
+                            skill_name = args.get("skill_name", "")
+                            prYellow(
+                                f">> Invoking function {fn_name} with argument {skill_name} <<"
+                            )
+                            result = await self.add_skill(skill_name)
+                        else:
+                            result = self.tools.execute(tool_call)
                         self.messages.append(
                             {
                                 "role": "tool",
@@ -337,7 +362,7 @@ class Agent:
         return f"I don't know this command:  {slash_command}"
 
 
-def load_agent(agent_name: str) -> Union[Agent, None]:
+async def load_agent(agent_name: str) -> Union[Agent, None]:
     found_agents = [a for a in available_agents if a.get("name") == agent_name]
     if len(found_agents) == 0:
         print(f"Agent named {agent_name} not found!")
@@ -354,10 +379,12 @@ def load_agent(agent_name: str) -> Union[Agent, None]:
         new_agent.add_context_function(context_function)
 
     agent_skills = agent_data.get("skills", [])
-    for skill in agent_skills:
-        new_agent.add_skill(skill)
+    await new_agent.define_skillset(agent_skills)
+    # for skill in agent_skills:
+    #     new_agent.add_skill(skill)
 
     agent_tools = agent_data.get("tools", [])
+    agent_tools.append("read_skill")
     for tool in agent_tools:
         tool_function = getattr(tool_catalog, tool)
         new_agent.add_tool(tool_function)

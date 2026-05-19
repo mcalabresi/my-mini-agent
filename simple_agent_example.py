@@ -60,8 +60,8 @@ async def main() -> None:
     agent.add_context_function(current_date_time)
     agent.add_context_function(user_context)
     # agent.context(my_files)
-    agent.add_skill("obsidian-markdown-lite")
-    agent.add_skill("long-term-memory")
+    await agent.add_skill("obsidian-markdown-lite")
+    await agent.add_skill("long-term-memory")
     # agent.context(obsidian_writer_skill)
 
     # example of defining a tool and registering on the fly

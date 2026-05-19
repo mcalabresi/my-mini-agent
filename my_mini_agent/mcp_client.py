@@ -19,7 +19,7 @@ class MCPClient:
         self.available_tools: list[Tool] | None = None
         self.name: str = mcp_server_name
         self.tool_names_list: list[str] = []
-        self.api_key = os.getenv(f"{mcp_server_name.upper()}_API_KEY") or "NO_API_KEY"
+        self.api_key = os.getenv(f"{mcp_server_name.upper()}_API_KEY", "NO_API_KEY")
         self.mcp_server_params = mcp_servers.get(self.name, None)
         if self.mcp_server_params is not None:
             key = f"{self.name.upper()}_API_KEY"

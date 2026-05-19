@@ -31,8 +31,8 @@ async def main() -> None:
     console.print(f"[blue]{my_mini_agent_logo}[/blue]")
 
     # loading a predefined agent
-    writing_agent = load_agent("Clive")
-    critic_agent = load_agent("Eddie")
+    writing_agent = await load_agent("Clive")
+    critic_agent = await load_agent("Eddie")
     # agent: Union[Agent, None] = load_agent("Clive")
 
     if writing_agent is not None and critic_agent is not None:

@@ -5,6 +5,7 @@ description = "An AI agent running on your local machine"
 readme = "README.md"
 requires-python = ">=3.14"
 dependencies = [
+    "aiofiles>=25.1.0",
     "dotenv>=0.9.9",
     "httpx>=0.28.1",
     "mcp>=1.27.1",

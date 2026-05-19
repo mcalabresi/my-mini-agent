@@ -247,3 +247,10 @@ def edit_note(
     finally:
         # Always return to the original working directory
         os.chdir(cwd)
+
+
+def read_skill(skill_name: str):
+    """Add a skill to your context so that you could use it
+
+    :param skill_name: str - the name of the skill, use one from the available skills list"""
+    return f"request to load skill {skill_name} done"
