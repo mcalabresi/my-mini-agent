@@ -1,5 +1,6 @@
 import json
 import os
+from asyncio import sleep
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any, Callable, Union
@@ -228,79 +229,100 @@ class Agent:
             # print(" API KWARGS :", api_kwargs)
             # here we make our post request, note that we send the whole list of messages, not just the last one
             async with httpx.AsyncClient() as client:
-                r = await client.post(
-                    url,
-                    headers=headers,
-                    json=api_kwargs,
-                    timeout=3000,
-                )
-                # print(r.text)
-                # if there's an error raise it
-                r.raise_for_status()
-                # get the data ( parse the json response from the LLM )
-                data = r.json()
-                # print(f"{data=}")
-                choices = data.get("choices")
-                usage = data.get("usage")
-                total_tokens = usage.get("total_tokens")
-                # update the token count
-                self.tokens_used = total_tokens
-                # api should provide choices
-                if not choices:
-                    raise RuntimeError("Model response missing choices")
+                try:
+                    r = await client.post(
+                        url,
+                        headers=headers,
+                        json=api_kwargs,
+                        timeout=3000,
+                    )
+                    # print(r.text)
+                    # if there's an error raise it
+                    r.raise_for_status()
+                    # get the data ( parse the json response from the LLM )
+                    data = r.json()
+                    # print(f"{data=}")
+                    choices = data.get("choices")
+                    usage = data.get("usage")
+                    total_tokens = usage.get("total_tokens")
+                    # update the token count
+                    self.tokens_used = total_tokens
+                    # api should provide choices
+                    if not choices:
+                        raise RuntimeError("Model response missing choices")
 
-                # the response is in the first choice
-                message = choices[0].get("message")
+                    # the response is in the first choice
+                    message = choices[0].get("message")
 
-                if message is None:
-                    # LLM responded nothing, is it an error?
-                    raise RuntimeError("Model response missing message")
+                    if message is None:
+                        # LLM responded nothing, is it an error?
+                        raise RuntimeError("Model response missing message")
 
-                # extracting the eventual tool_calls from LLM
-                tool_calls = message.get("tool_calls") or []
+                    # extracting the eventual tool_calls from LLM
+                    tool_calls = message.get("tool_calls") or []
 
-                # we create a list of dicts to specify the tool calls
-                formatted_tool_calls_list = [
-                    {
-                        "id": tc.get("id"),
-                        "type": tc.get("type"),
-                        "function": {
-                            "name": (tc.get("function") or {}).get("name"),
-                            "arguments": (tc.get("function") or {}).get("arguments"),
-                        },
-                    }
-                    for tc in tool_calls
-                ]
+                    # we create a list of dicts to specify the tool calls
+                    formatted_tool_calls_list = [
+                        {
+                            "id": tc.get("id"),
+                            "type": tc.get("type"),
+                            "function": {
+                                "name": (tc.get("function") or {}).get("name"),
+                                "arguments": (tc.get("function") or {}).get(
+                                    "arguments"
+                                ),
+                            },
+                        }
+                        for tc in tool_calls
+                    ]
 
-                # we append it to the messages to keep track
-                self.messages.append(
-                    {
-                        "role": "assistant",
-                        "content": message.get("content"),
-                        "tool_calls": formatted_tool_calls_list,
-                    }
-                )
+                    # we append it to the messages to keep track
+                    self.messages.append(
+                        {
+                            "role": "assistant",
+                            "content": message.get("content"),
+                            "tool_calls": formatted_tool_calls_list,
+                        }
+                    )
 
-                # finally we extract the agent's response
-                agent_response = message.get("content") or ""
+                    # finally we extract the agent's response
+                    agent_response = message.get("content") or ""
 
-                # Case in which there is no tool call, the LLM just responds some text
-                if not tool_calls or len(tool_calls) == 0:
-                    return agent_response
+                    # Case in which there is no tool call, the LLM just responds some text
+                    if not tool_calls or len(tool_calls) == 0:
+                        return agent_response
 
-                # Case in which there is a list of tool calls
-                for tool_call in tool_calls:
-                    # we execute each tool call and append the result into messages
-                    # print("\n I AM INTO TOOL CALL \n")
-                    # print(f"{tool_call=}")
-                    fn = tool_call.get("function")
-                    fn_name = fn.get("name")
-                    # is it an MCP call?
-                    is_MCP_call = False
-                    for mcp_client in self.mcp_clients:
-                        if fn_name in mcp_client.tool_names_list:
-                            is_MCP_call = True
-                            result = await mcp_client.execute(tool_call)
+                    # Case in which there is a list of tool calls
+                    for tool_call in tool_calls:
+                        # we execute each tool call and append the result into messages
+                        # print("\n I AM INTO TOOL CALL \n")
+                        # print(f"{tool_call=}")
+                        fn = tool_call.get("function")
+                        fn_name = fn.get("name")
+                        # is it an MCP call?
+                        is_MCP_call = False
+                        for mcp_client in self.mcp_clients:
+                            if fn_name in mcp_client.tool_names_list:
+                                is_MCP_call = True
+                                result = await mcp_client.execute(tool_call)
+                                self.messages.append(
+                                    {
+                                        "role": "tool",
+                                        "tool_call_id": tool_call.get("id"),
+                                        "content": json.dumps(result),
+                                    }
+                                )
+                        if not is_MCP_call:
+                            if fn_name == "read_skill":
+                                fn_payload = tool_call.get("function") or {}
+                                args = json.loads(fn_payload.get("arguments") or "{}")
+                                skill_name = args.get("skill_name", "")
+                                prYellow(
+                                    f">> Invoking function {fn_name} with argument {skill_name} <<"
+                                )
+                                result = await self.add_skill(skill_name)
+                            else:
+                                result = self.tools.execute(tool_call)
                             self.messages.append(
                                 {
                                     "role": "tool",
@@ -308,27 +330,14 @@ class Agent:
                                     "content": json.dumps(result),
                                 }
                             )
-                    if not is_MCP_call:
-                        if fn_name == "read_skill":
-                            fn_payload = tool_call.get("function") or {}
-                            args = json.loads(fn_payload.get("arguments") or "{}")
-                            skill_name = args.get("skill_name", "")
-                            prYellow(
-                                f">> Invoking function {fn_name} with argument {skill_name} <<"
-                            )
-                            result = await self.add_skill(skill_name)
-                        else:
-                            result = self.tools.execute(tool_call)
-                        self.messages.append(
-                            {
-                                "role": "tool",
-                                "tool_call_id": tool_call.get("id"),
-                                "content": json.dumps(result),
-                            }
-                        )
-                    # notice we don't return, after all tools are called we will
-                    # call again the model with the new message list containing the result
-                    # of the tool calls.
+                        # notice we don't return, after all tools are called we will
+                        # call again the model with the new message list containing the result
+                        # of the tool calls.
+
+                except httpx.HTTPStatusError as e:
+                    print(f"something went wrong with API call: {e}")
+                    print("retrying")
+                    await sleep(1)
 
     def slash_commands(self, slash_command: str) -> str:
         """manages slash commands
