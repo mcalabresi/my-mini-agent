@@ -90,7 +90,7 @@ class Agent:
         self.dynamic_context_functions[func.__name__] = func
         return func
 
-    async def add_skill(self, skill_name: str) -> None:
+    async def add_skill(self, skill_name: str) -> dict[str, Any]:
         """Add a skill to the context
 
         :skill_name: str - The name of the skill.
@@ -101,7 +101,7 @@ class Agent:
         """
         if not skill_name:
             print("empty skillname")
-            return
+            return {"result": "cannot add an empty skill"}
         # Get current working directory
         cwd = os.getcwd()
 
@@ -111,10 +111,11 @@ class Agent:
             try:
                 os.chdir(f"skills/{skill_name}")
             except FileNotFoundError:
-                raise RuntimeError(
+                print(
                     f"Directory 'skills/{skill_name}' does not exist. Please create it first "
                     "or run from the correct location."
                 )
+                return {"result": f"skill {skill_name} does not exist."}
 
         # Construct full filename with .md extension
         file_path = Path.cwd() / "SKILL.md"
@@ -131,8 +132,10 @@ class Agent:
                 return_skill.__name__ = f"{skill_name}-skill"
 
                 self.add_context_function(return_skill)
+                return {"result": f"skill {skill_name} correctly loaded"}
         except Exception as e:
-            raise RuntimeError(f"Failed to read file: {str(e)}")
+            print(f"Failed to read file: {str(e)}")
+            return {"result": f"cannot read skill {skill_name}"}
         finally:
             # Always return to the original working directory
             os.chdir(cwd)
