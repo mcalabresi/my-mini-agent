@@ -12,6 +12,10 @@ Store and retrieve information in the Obsidian vault **"agent-space"**, using ma
 * Use `read_note` to view note contents.
 * Use `list_notes` to see all notes.
 * Use sub-indexes (e.g., `stories-index`) to navigate related notes.
+* Do not infer, assume, or add details that are not explicitly written in memory.
+* If information is missing or uncertain, check relevant notes/documents first.
+* If the information is not found, explicitly say you do not know.
+* If you need to know the description of a note check the *index notes.
 
 ## Writing memory
 

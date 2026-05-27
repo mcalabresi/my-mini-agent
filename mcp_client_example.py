@@ -31,15 +31,12 @@ async def main() -> None:
 
     if agent is not None:
         # connect with MCP servers
-        imageMCP = await MCPClient("imageMCP").connect()
-        if imageMCP is not None:
-            agent.mcp_clients.append(imageMCP)
-            agent.add_all_mcp_tools(imageMCP)
-
-        pixserp = await MCPClient("pixserp").connect()
-        if pixserp is not None:
-            agent.mcp_clients.append(pixserp)
-            agent.add_all_mcp_tools(pixserp)
+        mcp_client_names = ["imageMCP", "pixserp"]
+        for client_name in mcp_client_names:
+            mcp_client: MCPClient | None = await MCPClient(client_name).connect()
+            if mcp_client is not None:
+                agent.mcp_clients.append(mcp_client)
+                agent.add_all_mcp_tools(mcp_client)
 
         # get the total tokens in context window
         total_context_tokens = agent.total_context_window_tokens
@@ -54,10 +51,10 @@ async def main() -> None:
             if user_input.strip().lower() in {"quit", "exit", "bye", "ciao", "q"}:
                 console.print("[dim]Goodbye![/dim]")
                 # IMPORTANT: To avoid issues close the MCP clients in reverse order respect to the connection order!
-                if pixserp is not None:
-                    await pixserp.disconnect()
-                if imageMCP is not None:
-                    await imageMCP.disconnect()
+                if agent.mcp_clients is not None and len(agent.mcp_clients) > 0:
+                    for client in reversed(agent.mcp_clients):
+                        if client is not None:
+                            await client.disconnect()
                 return
 
             # showing the spinner while the LLM thinks about what to say

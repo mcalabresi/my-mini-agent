@@ -142,12 +142,19 @@ class Agent:
 
     async def define_skillset(self, skillset: list[str]):
         available_skills_text = await extract_skills_frontmatters("skills", skillset)
+        if len(available_skills_text) > 0:
 
-        def available_skills() -> str:
-            instructions = "Here are all the available skills. If you need to use one of them call tool `read_skill` with parameter skill_name set to skill `name` \n\n"
-            return instructions + available_skills_text
+            def available_skills() -> str:
+                # instructions = "Here are ALL the ONLY available skills. If you need to use one of the skills in the list below, call tool `read_skill` with parameter skill_name set to skill `name` \n\n"
+                instructions = (
+                    "The list below contains the complete and exclusive set of available skills. "
+                    "Do not reference, assume, invent, or call any skill that is not explicitly listed. "
+                    "If a task requires using one of these skills, call the `read_skill` tool "
+                    "with the parameter `skill_name` set exactly to the skill's `name`.\n\n"
+                )
+                return instructions + available_skills_text
 
-        self.add_context_function(available_skills)
+            self.add_context_function(available_skills)
 
     def prepare_system_context(self) -> list[dict[str, Any]]:
         """method that prepares a list of context info for the model
@@ -351,6 +358,10 @@ class Agent:
         if slash_command.strip().lower() in {"/dm", "/debug_messages"}:
             return message_debug(self.messages)
 
+        elif slash_command.strip().lower() in {"/rawm", "/raw_messages"}:
+            return f"These are all the messages of last call: \n\n {list_format(self.messages)}"
+            # return message_debug(self.messages)
+
         # debug tools
         elif slash_command.strip().lower() in {"/dt", "/debug_tools"}:
             total_schemas = self.tools.get_schemas() + self.mcp_tools_schemas
@@ -402,17 +413,3 @@ async def load_agent(agent_name: str) -> Union[Agent, None]:
         new_agent.add_tool(tool_function)
 
     return new_agent
-
-
-"""
-Note to self. it's better that the agent connects and disconnects the mcp servers as there is just one AsyncExitStack
-
-from contextlib import AsyncExitStack
-
-self.exit_stack = AsyncExitStack()
-streams = await self.exit_stack.enter_async_context(sse_client())
-session = await self.exit_stack.enter_async_context(session_client())
-
-# Later, cleanup
-await self.exit_stack.aclose()
-"""

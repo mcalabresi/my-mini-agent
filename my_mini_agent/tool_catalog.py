@@ -132,7 +132,7 @@ def read_note(note_name: Annotated[str, "note name"]) -> dict[str, str]:
         os.chdir(cwd)
 
 
-def list_notes() -> dict[str, str]:
+def list_notes() -> dict[str, list[str]]:
     """
     Lists the notes in agent-space.
 
@@ -147,8 +147,10 @@ def list_notes() -> dict[str, str]:
         # Write the content to the file
         contents = os.listdir("./agent-space")
         contents = [file.split(".")[0] for file in contents if file.endswith(".md")]
-        result = f"[{', '.join(contents)}]"
-        return {"result": result}
+        # print(f"{contents=}")
+        # result = f"[{', '.join(contents)}]"
+        # print(f"{result=}")
+        return {"result": contents}
     except Exception as e:
         raise RuntimeError(f"Failed to list notes: {str(e)}")
 
@@ -253,4 +255,4 @@ def read_skill(skill_name: str):
     """Add a skill to your context so that you could use it
 
     :param skill_name: str - the name of the skill, use one from the available skills list"""
-    return f"request to load skill {skill_name} done"
+    return f"Request to load skill {skill_name} done"

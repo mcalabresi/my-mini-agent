@@ -77,7 +77,7 @@ def get_local_model_context_window(model_name: str) -> int:
 
 
 def list_format(input_list: List[Dict[str, Any]]) -> str:
-    return pformat(input_list, depth=3)
+    return pformat(input_list, depth=5)
 
 
 def truncate_long_args(**kwargs: dict[str, str]) -> dict[str, str]:
